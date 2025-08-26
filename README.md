@@ -15,7 +15,6 @@ The server provides the following tools:
 - **System Architecture** - Get system architecture (arm64/x86_64)
 
 ## Requirements
-
 - macOS 13.0 or later
 - Swift 6.1 or later
 - Xcode (for development tools functionality)
@@ -26,11 +25,20 @@ The server provides the following tools:
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone 
 cd swift-dev-tools-mcp
 ```
 
 2. Build the project:
+
+### Debug Mode: 
+
+```bash
+swift build 
+```
+
+### Release Mode 
+
 ```bash
 swift build -c release
 ```
@@ -43,7 +51,7 @@ Add this package as a dependency in your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "<repository-url>", from: "1.0.0")
+    .package(url: "https://github.com/badrinathvm/swift-dev-tools-mcp.git", from: "1.0.0")
 ]
 ```
 
@@ -69,11 +77,23 @@ The server communicates via stdio using the Model Context Protocol.
 
 Configure your MCP client to use this server. For example, with Claude Desktop, add to your configuration:
 
+### Debug Mode
 ```json
 {
   "mcpServers": {
     "swift-dev-tools": {
         "command": "<Path of the project>/swift-dev-tools-mcp/.build/arm64-apple-macosx/debug/swift-dev-tools-mcp"
+    }
+  }
+}
+```
+
+### Release Mode
+```json
+{
+  "mcpServers": {
+    "swift-dev-tools": {
+        "command": "<Path of the project>/swift-dev-tools-mcp/.build/arm64-apple-macosx/release/swift-dev-tools-mcp"
     }
   }
 }
@@ -186,12 +206,10 @@ To add a new development tool:
 4. Add tests if applicable
 5. Submit a pull request
 
-## License
-
-[Add your license information here]
 
 ## Support
 
 For issues and questions:
 - Open an issue on GitHub
 - Check the [Model Context Protocol documentation](https://modelcontextprotocol.io/)
+
