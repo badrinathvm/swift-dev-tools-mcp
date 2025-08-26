@@ -138,7 +138,7 @@ func systemArchitecture() -> String? {
     return runShellCommand(["uname", "-m"], errorPrefix: "Error getting system architecture")
 }
 
-/// Lists all installed Xcode versions on the system, marking the currently active one
+/// Lists all installed Xcode versions on the system, marking the current active one
 /// Uses `mdfind` to locate all Xcode installations and reads version info from their Info.plist
 /// This technique comes from https://gist.github.com/dive/da0a696f2d51a1cbef04762c3a216192#spotlight
 /// - Returns: Formatted list of Xcode installations with versions and paths, or nil if none found
