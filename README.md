@@ -11,6 +11,8 @@
 - 📦 **Xcode SDKs** - All available development SDKs
 - 🔗 **Connected Devices** - Live iOS/macOS device detection
 - 🍎 **macOS System Info** - Version and architecture details
+- 📋 **Multiple Xcode Support** - Detect and manage multiple Xcode versions
+- ✅ **Environment Health** - Comprehensive development tools status check
 
 ## 🎯 Quick Start
 
@@ -67,6 +69,8 @@ swift run swift-dev-tools-mcp
 | 🔗 `connected_devices` | Live device list | Connected iOS/macOS devices |
 | 🍎 `macos_version` | System version | `macOS 14.2.1 (23C71)` |
 | ⚙️ `system_architecture` | CPU architecture | `arm64` or `x86_64` |
+| 📋 `list_xcode_versions` | All Xcode installations | `Xcode.app (16.1, Build 16B40), Xcode-26.0.0-Beta.4.app (Version 26.0, Build 17A5285i), etc.` |
+| ✅ `developer_tools_status` | Dev environment health check | Status of all dev tools with ✓/✗ |
 
 ## 🏗️ Architecture
 

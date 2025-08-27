@@ -55,6 +55,18 @@ let systemArchTool = Tool(
     inputSchema: .object(["type": .string("object")])
 )
 
+let listXcodeVersionsTool = Tool(
+    name: "list_xcode_versions",
+    description: "Lists all installed Xcode versions and marks the active one",
+    inputSchema: .object(["type": .string("object")])
+)
+
+let developerToolsStatusTool = Tool(
+    name: "developer_tools_status",
+    description: "Comprehensive health check of development tools and environment",
+    inputSchema: .object(["type": .string("object")])
+)
+
 await server.withMethodHandler(ListTools.self) { params in
     ListTools.Result(
         tools: [
@@ -64,7 +76,9 @@ await server.withMethodHandler(ListTools.self) { params in
             xcodeSDKsTool,
             connectedDevicesTool,
             macOSVersionTool,
-            systemArchTool
+            systemArchTool,
+            listXcodeVersionsTool,
+            developerToolsStatusTool
         ]
     )
 }
@@ -85,6 +99,10 @@ await server.withMethodHandler(CallTool.self) { params in
         return CallTool.Result(content: [.text(macOSVersion() ?? "No macOS version")])
     case systemArchTool.name:
         return CallTool.Result(content: [.text(systemArchitecture() ?? "No architecture info")])
+    case listXcodeVersionsTool.name:
+        return CallTool.Result(content: [.text(listXcodeVersions() ?? "No Xcode installations found")])
+    case developerToolsStatusTool.name:
+        return CallTool.Result(content: [.text(developerToolsStatus() ?? "Unable to get tools status")])
     default:
         throw MCPError.invalidParams("Wrong tool name: \(params.name)")
     }
@@ -118,6 +136,103 @@ func macOSVersion() -> String? {
 
 func systemArchitecture() -> String? {
     return runShellCommand(["uname", "-m"], errorPrefix: "Error getting system architecture")
+}
+
+/// Lists all installed Xcode versions on the system, marking the current active one
+/// Uses `mdfind` to locate all Xcode installations and reads version info from their Info.plist
+/// This technique comes from https://gist.github.com/dive/da0a696f2d51a1cbef04762c3a216192#spotlight
+/// - Returns: Formatted list of Xcode installations with versions and paths, or nil if none found
+func listXcodeVersions() -> String? {
+    var output = "Installed Xcode Versions:\n"
+    let activeDir = runShellCommand(["xcode-select", "-p"])
+    
+    // Find all Xcode installations using mdfind
+    let findXcodes = runShellCommand(["mdfind", "kMDItemCFBundleIdentifier=com.apple.dt.Xcode"], 
+                                     errorPrefix: "Error finding Xcode installations")
+    
+    if let xcodePaths = findXcodes?.components(separatedBy: "\n").filter({ !$0.isEmpty }) {
+        for path in xcodePaths {
+            // Get version from Info.plist
+            let versionCmd = ["defaults", "read", "\(path)/Contents/Info", "CFBundleShortVersionString"]
+            let buildCmd = ["defaults", "read", "\(path)/Contents/version", "ProductBuildVersion"]
+            
+            if let version = runShellCommand(versionCmd, errorPrefix: "Error reading Xcode version") {
+                let build = runShellCommand(buildCmd) ?? "Unknown Build"
+                let isActive = activeDir?.contains(path) ?? false
+                let status = isActive ? " [ACTIVE]" : ""
+                let appName = URL(fileURLWithPath: path).lastPathComponent
+                output += "- \(appName) (\(version), Build \(build)) - \(path)\(status)\n"
+            }
+        }
+    }
+    
+    output += "\nNote: Use 'sudo xcode-select -s /path/to/Xcode.app/Contents/Developer' to switch versions"
+    return output
+}
+
+/// Performs a comprehensive health check of the development tools environment
+/// Checks Xcode, Swift, SDK versions, license status, and developer mode
+/// - Returns: Formatted status report with check marks for each component, or nil if unable to check
+func developerToolsStatus() -> String? {
+    var output = "Developer Tools Status:\n"
+    
+    // Check Xcode version
+    if let xcodeVersion = runShellCommand(["xcodebuild", "-version"]) {
+        let firstLine = xcodeVersion.components(separatedBy: "\n").first ?? ""
+        output += "✓ Xcode: \(firstLine)\n"
+    } else {
+        output += "✗ Xcode: Not installed or not in PATH\n"
+    }
+    
+    // Check active path
+    if let activePath = runShellCommand(["xcode-select", "-p"]) {
+        let xcodePath = activePath.replacingOccurrences(of: "/Contents/Developer", with: "")
+        output += "✓ Active Path: \(xcodePath)\n"
+    } else {
+        output += "✗ Active Path: Not set\n"
+    }
+    
+    // Check command line tools
+    let cltCheck = runShellCommand(["xcode-select", "-p"])
+    output += cltCheck != nil ? "✓ Command Line Tools: Installed\n" : "✗ Command Line Tools: Not installed\n"
+    
+    // Check Swift version
+    if let swiftVersion = runShellCommand(["swift", "--version"]) {
+        // Extract just the version number
+        if let range = swiftVersion.range(of: "Swift version [0-9.]+", options: .regularExpression) {
+            let version = String(swiftVersion[range]).replacingOccurrences(of: "Swift version ", with: "")
+            output += "✓ Swift: \(version)\n"
+        } else {
+            output += "✓ Swift: Installed\n"
+        }
+    } else {
+        output += "✗ Swift: Not found\n"
+    }
+    
+    // Check SDK version
+    if let sdkVersion = runShellCommand(["xcrun", "--show-sdk-version"]) {
+        output += "✓ SDK: macOS \(sdkVersion)\n"
+    } else {
+        output += "✗ SDK: Not found\n"
+    }
+    
+    // Check Xcode license
+    let licenseCheck = runShellCommand(["xcodebuild", "-checkFirstLaunchStatus"])
+    if licenseCheck != nil {
+        output += "✓ License: Accepted\n"
+    } else {
+        output += "✗ License: May need acceptance (run 'sudo xcodebuild -license')\n"
+    }
+    
+    // Check developer mode (for iOS device debugging)
+    let devModeCheck = runShellCommand(["DevToolsSecurity", "-status"])
+    if let status = devModeCheck, status.contains("enabled") {
+        output += "✓ Developer Mode: Enabled"
+    } else {
+        output += "✗ Developer Mode: Disabled (run 'DevToolsSecurity -enable')"
+    }
+    
+    return output
 }
 
 // MARK: - Generic Shell Command Runner
