@@ -58,6 +58,12 @@ swift run swift-dev-tools-mcp
 }
 ```
 
+**To get upgrade to latest one**
+
+```bash
+ brew update && brew upgrade swift-dev-tools-mcp
+```
+
 ## 🛠️ Available Tools
 
 | Tool | Description | Example Output |
